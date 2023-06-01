@@ -11,9 +11,9 @@ Support for .usm files and/or some audio types (AIX audio, MP2 audio) used in so
 
 The latest version of the programs can be downloaded [here](https://github.com/Firebow59/SofdecVideoTools/releases/latest).
 
-Documentation for SFDExtractor can be found [here](https://drive.google.com/file/d/1G7Gdb631-so_4jwXCVIT7Yo2PvecY91H/view?usp=sharing), or alternatively [here.](https://github.com/Firebow59/oldalpha-SofdecVideoTools/blob/main/resource/SFDExtractor.pdf)
+Documentation for SFDExtractor can be found [here](https://drive.google.com/file/d/1G7Gdb631-so_4jwXCVIT7Yo2PvecY91H/view?usp=sharing), or alternatively [here.](https://github.com/Firebow59/SofdecVideoTools/blob/main/resource/SFDExtractor.pdf)
 
-Documentation for SFDCreator can be found [here](https://drive.google.com/file/d/1-RAPY_Cn8hocHDn3Fo25PqBmAtaOHdYq/view?usp=sharing), or alternatively [here.](https://github.com/Firebow59/oldalpha-SofdecVideoTools/blob/main/resource/SFDCreator.pdf)
+Documentation for SFDCreator can be found [here](https://drive.google.com/file/d/1-RAPY_Cn8hocHDn3Fo25PqBmAtaOHdYq/view?usp=sharing), or alternatively [here.](https://github.com/Firebow59/SofdecVideoTools/blob/main/resource/SFDCreator.pdf)
 
 ## Requirements
 - A x64/64-bit Windows PC
