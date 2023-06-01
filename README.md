@@ -36,6 +36,6 @@ For developers, feel free to use the code in this repo for your own projects, al
 
 
 
-**Q:** A prompt comes up saying "Windows protect your PC". What is this, and what do I do to bypass it?
+**Q:** A prompt comes up saying "Windows protected your PC". What is this, and what do I do to bypass it?
 
 **A:** This happens with programs not recognized by the Windows software database. To bypass it, click on "More info", then on "Run Anyway". The programs should boot after that.
