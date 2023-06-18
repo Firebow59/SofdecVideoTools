@@ -18,7 +18,7 @@ def check_for_new_version(owner, repo, current_version):
 def main():
     owner = "Firebow59"
     repo = "SofdecVideoTools"
-    current_version = "1.0.0"
+    current_version = "1.0.2"
 
     check_for_new_version(owner, repo, current_version)
 
