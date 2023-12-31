@@ -11,7 +11,7 @@ Support for .usm files and/or some audio types (AIX audio, MP2 audio) used in so
 
 The latest version of the programs can be downloaded [here](https://github.com/Firebow59/SofdecVideoTools/releases/latest).
 
-Documentation for the programs can be found [here.](https://github.com/Firebow59/oldalpha-SofdecVideoTools/blob/main/resource/docs/documentation.pdf)
+Documentation for the programs can be found [here.](https://github.com/Firebow59/SofdecVideoTools/blob/main/resource/docs/documentation.pdf)
 
 
 ## Requirements
