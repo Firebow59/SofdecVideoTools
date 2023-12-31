@@ -40,7 +40,7 @@ For developers, feel free to use the code in this repo for your own projects, EX
 **A:** This happens with programs not recognized by the Windows software database. To bypass it, click on "More info", then on "Run Anyway". The programs should boot after that.
 
 ## Credits + Other Infomation
-FFmpeg is licensed under the [GNU Lesser General Public License (LGPL) version 2.1 or later](https://www.gnu.org/licenses old-licenses/lgpl-2.1.html).
+FFmpeg is licensed under the [GNU Lesser General Public License (LGPL) version 2.1 or later](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html).
 For more details, please see [this page](https://www.ffmpeg.org/legal.html)
 Copyright (c) [2000-2023] FFmpeg developers
 
