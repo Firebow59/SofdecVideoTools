@@ -27,10 +27,12 @@ For developers, feel free to use the code in this repo for your own projects, EX
 
 ## O&A
 **Q:** How much space do the programs take up once extracted?
+
 **A:** They are about 50MB if you already have FFmpeg installed on your system. Otherwise, it's closer to 500MB with FFmpeg.
 
 
 **Q:** A prompt comes up saying "Windows protected your PC". What is this, and what do I do to bypass it?
+
 **A:** This happens with programs not recognized by the Windows software database. To bypass it, click on "More info", then on "Run Anyway". The programs should boot after.
 
 ## Credits + Other Infomation
