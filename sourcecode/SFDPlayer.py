@@ -1,260 +1,301 @@
 import os
 import tkinter as tk
-import shutil
 import subprocess
 import atexit
 from tkinter import IntVar, messagebox, StringVar, Frame, LabelFrame, Label, Button, Toplevel, filedialog, ttk
+from PIL import Image, ImageTk
 
-#Make sure you have check_for_ffmpeg.py in the same folder as this PY file, or else the program won't work.
-from check_for_ffmpeg import ffmpeg_location_int, ffplay_location_int, run_ffmpeg_check, update_ffmpeg
+#Make sure you have check_for_ffmpeg.py and updater.py in the same folder as this PY file, or else the program won't work.
+from check_for_ffmpeg import ffmpeg_location_int, ffprobe_location_int, run_ffmpeg_check, update_ffmpeg, ffplay_location_int
+from updater import check_for_new_SofdecVideoTools_version
 
 master = tk.Tk()
-master.geometry("300x130"), master.title("SFDPlayer V1.0.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdplayer.ico")
+master.geometry("300x130"), master.title("SFDPlayer V2.0.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdplayer.ico")
 
-currentdir = os.getcwd()
-audiomap = StringVar()
-audiotracknumber = StringVar()
-sfdfilepath = StringVar()
-sfdname = StringVar()
-outputdir_path = StringVar()
+SFDfilepath = StringVar()
+SFDname = StringVar()
 programresolution = StringVar()
 aspectratio = StringVar()
+disableaudio = IntVar()
+only_extract_certain_audio_tracks_int = IntVar()
 
-
-programresolution.set('-x 640 -y 400') #Set FFplay box size
+programresolution.set('-x 1280 -y 720') #Set FFplay box size
 #aspectratio.set('-aspect 4:3')
 
-def selectvideo():
- SFDfile = filedialog.askopenfilename(title="Select A SFD File", filetypes=[("SFD file", ".sfd")])
- sfdfilepath.set(SFDfile)
- sfdname.set(os.path.basename(sfdfilepath.get()))
- toggleplaybutton()
+helphint_image = ImageTk.PhotoImage(Image.open(os.getcwd() + '/resource/img/questionmark.png').resize((10, 13)))
+
+
+def gui_elements():
+ global show_help_hint
+ def show_help_hint(helpmenu_message_index):
+  help_message_textbox_title = [
+  'Play Audio Tracks',
+  ]
+
+  help_messages = [
+  '"All Tracks" will play every audio track present in the SFD.\n\n"Custom" will allow you to play only certain audio tracks from an SFD, starting at 0 (the first audio track in the file) and going up to 31. (ex. To only play tracks 1 (the 2nd track in the SFD file) and 3 (the 4th track in the SFD file), you would enter "1, 4", without the quotes.)',
+  ]
+
+  help_message_textbox = tk.messagebox.showinfo(title=f'{help_message_textbox_title[helpmenu_message_index]}', message=f'{help_messages[helpmenu_message_index]}')
+
+
+ 
+ def selectvideo():
+  SFDfile = filedialog.askopenfilename(title="Select A SFD File", filetypes=[("SFD file", ".sfd")])
+  SFDfilepath.set(SFDfile)
+  SFDname.set(os.path.basename(SFDfilepath.get()))
+  toggleplaybutton()
+
+ def opendocspdf():
+  sfdplayerdocs = os.getcwd() + '/resource/docs/documentation.pdf'
+  os.startfile(sfdplayerdocs)
+
+ chooseSFD = Button(text="Browse", command=selectvideo, padx=45, pady=5).place(x=10, y=55)
+ playSFD = Button(text="Play SFD", command=playvideo, state=tk.DISABLED, padx=40, pady=5)
+ playSFD.place(x=155, y=55) #leave seperate to fix issue with "None"
+ opendocs = Button(text="Documentation", command=opendocspdf, padx=93).place(x=10, y=95) #padx=22
+
+ def toggleplaybutton():
+  if SFDfilepath.get() == '':
+   playSFD.config(state=tk.DISABLED)
+  else:
+   playSFD.config(state=tk.NORMAL)
+
+ vbitrate = StringVar()
+ vidbitrateselect = Label(text="Video Bitrate:", font = ("Arial Bold", 8)).place(x=4700, y=87)
+ videobitrateentry = ttk.Entry(textvariable=vbitrate, width=15)
+ videobitrateentry.place(x=5000, y=105)
+ vbitratevalue = f'-b:a {vbitrate.get()}'
+
+ global custom_audio_track_extraction_list
+ def custom_audio_track_extraction_list(*args):
+   if not audiotracks_to_extract_combobox.get() == 'All Tracks':
+    only_extract_certain_audio_tracks_int.set(1)
+    for audio_track_number in audiotracks_to_extract_textvariable.get().split(','):
+     if not audio_track_number.strip() in list_of_audio_tracks_to_extract and audio_track_number.strip().isdigit():
+      list_of_audio_tracks_to_extract.append(audio_track_number.strip())
+      master.focus_set()  #Force program to unselect the audioformatbox, updating it's variables.
+
+
+      global string_of_audio_tracks_to_extract_for_command
+      string_of_audio_tracks_to_extract_for_command = StringVar()
+      for numbers_of_audio_tracks in list_of_audio_tracks_to_extract:
+       if not numbers_of_audio_tracks in string_of_audio_tracks_to_extract_for_command.get():
+        string_of_audio_tracks_to_extract_for_command.set(string_of_audio_tracks_to_extract_for_command.get() + numbers_of_audio_tracks + ',')
+      #After every track to extract is added to the list:
+      string_of_audio_tracks_to_extract_for_command.set(string_of_audio_tracks_to_extract_for_command.get().strip()[:-1]) #[:-1] to remove the last extra " ," on the last number in the string.
+      list_of_audio_tracks_to_extract.clear()
+
+
+     elif not audio_track_number.strip().isdigit() and not audio_track_number.strip() == '':
+      #Message box instead displayed once the user clicks "Play SFD", to prevent the box from showing up twice in a row.
+      only_extract_certain_audio_tracks_int.set(0)
+      return
+   else:
+    only_extract_certain_audio_tracks_int.set(0)
+
+ audtrackselect = Label(text="Use Audio Track:", font = ("Arial Bold", 8)).place(x=179, y=8)
+ global list_of_audio_tracks_to_extract
+ global audiotracks_to_extract_combobox
+ list_of_audio_tracks_to_extract = []
+ OPTIONS_audiotracktype = ["All Tracks", "Custom"]
+ audiotracks_to_extract_textvariable = StringVar()
+ audiotracks_to_extract_combobox = ttk.Combobox(master, value=OPTIONS_audiotracktype, textvariable=audiotracks_to_extract_textvariable, width=14)
+ audiotracks_to_extract_combobox.place(x=182, y=25)
+ audiotracks_to_extract_combobox.current(0)
+
+ audiotracks_to_extract_helphint_label = Label(image=helphint_image)
+ audiotracks_to_extract_helphint_label.image = helphint_image
+ audiotracks_to_extract_helphint_label.place(x=277, y=8)  #Leave .place seperate to avoid error with bind
+ audiotracks_to_extract_helphint_label.bind("<Button-1>", lambda event: show_help_hint(0))  #<Button-1> = left click on the question mark icon
+
+ def updateaudiotracktype(*args):
+   if audiotracks_to_extract_combobox.get() == "All Tracks":
+    audiotracks_to_extract_combobox.config(state="readonly")
+    audiotracks_to_extract_textvariable.set("All Tracks")
+    audiotracks_to_extract_combobox.selection_clear()
+   elif audiotracks_to_extract_combobox.get() == "Custom":
+    audiotracks_to_extract_combobox.config(state="normal")  #Allow typing in the combobox
+    audiotracks_to_extract_textvariable.set("")
+    audiotracks_to_extract_combobox.selection_clear()
+ audiotracks_to_extract_combobox.bind("<<ComboboxSelected>>", updateaudiotracktype)
+ audiotracks_to_extract_combobox.bind("<FocusOut>", custom_audio_track_extraction_list)
+
+
+ def toggleaudiotrackselector():
+  if disableaudio.get() == 1:
+   audiotracks_to_extract_combobox.config(state=tk.DISABLED)
+  else:
+   audiotracks_to_extract_combobox.config(state=tk.NORMAL)
+   audiotracks_to_extract_combobox.current(0)
+
+ disableaudiocheck = ttk.Checkbutton(text='Disable audio', variable=disableaudio, command=toggleaudiotrackselector, onvalue=1, offvalue=0).place(x=10, y=10)
+
+ def changeffplayresolution():
+  if playatoriginalresolution.get() == 1:
+   programresolution.set('')
+  else:
+   programresolution.set('-x 640 -y 400')
+
+ playatoriginalresolution = IntVar()
+ playatoriginalresolutioncheck = ttk.Checkbutton(text="Play at original resolution", variable=playatoriginalresolution, command=changeffplayresolution, onvalue=1, offvalue=0).place(x=10, y=27)
+
+
 
 
 def playvideo():
- if sfdfilepath.get() == '':
-  tk.messagebox.showerror('File Error', "No SFD was provided. Please provide an SFD to continue.")
+ custom_audio_track_extraction_list()  #Run this to update it in case the user went directly from the audio tracks combobox to playing the SFD, in which case the combobox and thus variable wouldn't have been updated.
+ if only_extract_certain_audio_tracks_int.get() == 0 and not audiotracks_to_extract_combobox.get() == "All Tracks":
+  tk.messagebox.showerror(title='Invalid Input for Custom Audio Extraction', message="The input provided for custom audio track extraction was invalid.\n\nPlease ensure only numbers are present in the box, and that it's written in the format 'A, B, C, ...' (ex. 1, 12, 4, 5, 2)")
   return
 
- global sfdfolder
- sfdfolder = os.getcwd() + f'/sfdfile/{sfdname.get()}'
- if os.path.exists("sfdfile"):
-  if os.path.isfile(sfdfolder):
-   if os.path.isfile(sfdname.get()):
-    os.remove(sfdname.get())
-    shutil.move(sfdfolder, os.getcwd())
-  os.removedirs("sfdfile")
- if os.path.isfile(sfdname.get()): #if file exists in the same directory as SFDplayer, move it to a temp folder to prevent copy error
-  os.mkdir("sfdfile")
-  shutil.move(sfdname.get(), "sfdfile")
-  sfdfilepath.set(sfdfolder)
- 
- if os.path.exists(sfdfilepath.get()):
-  outputdir = os.path.join(os.getcwd() + '/' + sfdname.get())
-  shutil.copy(sfdfilepath.get(), outputdir)
-  outputdir_path.set(outputdir)
-  sfdname.set(os.path.basename(outputdir_path.get()))
-  os.rename(sfdname.get(), 'sfd.sfd')
 
+ if SFDfilepath.get() == '':
+  tk.messagebox.showerror('File Error', "No SFD was provided. Please provide an SFD to continue.")
+  return
 
  #Set ffmpeg command properly if it's on the user's PATH
  if ffmpeg_location_int.get() == 1:
   ffmpeg_exe_path = 'ffmpeg.exe'
  else:
-  ffmpeg_exe_path = currentdir + '/resource/bin/ffmpeg/ffmpeg.exe'
+  ffmpeg_exe_path = os.getcwd() + '/resource/bin/ffmpeg/ffmpeg.exe'
  if ffplay_location_int.get() == 1:
    ffplay_exe_path = 'ffplay.exe'
  else:
-  ffplay_exe_path = currentdir + '/resource/bin/ffmpeg/ffplay.exe'
+  ffplay_exe_path = os.getcwd() + '/resource/bin/ffmpeg/ffplay.exe'
 
 
- print("")
- print("Copying SFD video...")
- command=f'"{ffmpeg_exe_path}" -i sfd.sfd -c:v copy -an sfd.mpeg'
- subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
-
- if disableaudio.get() == 1:
-  print("Disable audio checked, skipping audio conversion...")
- else:
-  print("Converting audio to playable format...")
-  command = f'"{ffmpeg_exe_path}" -y -i sfd.sfd -map {audiomap.get()} audio.mp3'
-  subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
-
-
- if os.path.isfile('audio.mp3'):
-  min_file_size = 5
-  file_size_kb = os.path.getsize('audio.mp3') // 5
-  if file_size_kb < min_file_size:
-   print("Audio track unable to be converted, no audio will be played alongside the SFD.")
-   os.remove('audio.mp3')
- else:
-  if disableaudio.get() == 1:
-   pass
+ SFD_extractor_EXE_path = os.getcwd() + '/SFDExtractor.exe'
+ if os.path.isfile(SFD_extractor_EXE_path):
+  print("Extracting SFD data...")
+  if only_extract_certain_audio_tracks_int.get() == 1:
+   only_extract_certain_audio_tracks_command = f'-audiotracks {string_of_audio_tracks_to_extract_for_command.get()}'
   else:
-   print("No audio in selected audio track (or possibly any of the audio tracks), skipping audio...")
+   only_extract_certain_audio_tracks_command = ''
 
-
- if os.path.isfile('audio.mp3'):
-  print("Putting extracted audio into video...")
-  command=f'"{ffmpeg_exe_path}" -y -i sfd.mpeg -i audio.mp3 -c:v copy -c:a copy sfdwithaudio.mpeg'
-  subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
-  print(f"Playing {sfdname.get()} with audio track {audiotracknumber.get()}.")
+  #Extraction type = 0 (Video/Audio), or 1 (Video only), so if disable audio = 1, it works to enable only video extraction
+  try:
+   extract_SFD_data=f'"{SFD_extractor_EXE_path}" -cmdmode -disable_done_text -disable_updater -disable_ffmpeg_check -autooverwrite -noconvert -extractiontype {disableaudio.get()} {only_extract_certain_audio_tracks_command} -file "{SFDfilepath.get()}" -outputfolder "{os.getcwd()}"'
+   subprocess.run(extract_SFD_data)
+  except IOError as extraction_error:
+   cleanup_files()
+   extraction_error_message = extract_SFD_data.stderr or extract_SFD_data.stdout or "An unknown error occurred."
+   tk.messagebox.showerror('SFDExtractor Error', f"{os.path.basename(SFDfilepath.get())} could not be extracted. Please try again. If the issue persists, reach out either on SofdecVideoTool's GitHub or GameBanana page with details on the error, file being used, etc.")
  else:
-  command=f'"{ffmpeg_exe_path}" -y -i sfd.mpeg -c:v copy sfdwithaudio.mpeg'
-  subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
-  print(f"Playing {sfdname.get()} without audio.")
+  tk.messagebox.showerror(title='File Missing Error', message="SFDExtractor.exe could not be found. If it is missing from the folder containing SFDPlayer.exe, reinstall SofdecVideoTools.")
+  return
+ 
+ #Convert video/audio data to MPG/MP2
+ print("Converting video/audio data...", end='\r')
+ for extracted_SFD_files in os.listdir(os.getcwd()):
+  if extracted_SFD_files.lower().endswith(('.m1v', '.m2v')):
+   if extracted_SFD_files.lower().endswith(('videotrack_e0.m1v', 'videotrack_e0.m2v')):
+    os.rename((os.getcwd() + '/' + extracted_SFD_files), 'video.mpg')
+  if extracted_SFD_files.lower().endswith(('.sfa', '.adx', '.aix', '.ac3')):
+   try:
+    convert_audio_data=f'"{ffmpeg_exe_path}" -hide_banner -loglevel error -i "{os.getcwd() + f'/{extracted_SFD_files}'}" -c:a mp2 -b:a 320k -bitexact {extracted_SFD_files}.mp2'
+    subprocess.run(convert_audio_data, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
+   except IOError as audio_conversion_error:
+    cleanup_files()
+    audio_conversion_error_message = convert_audio_data.stderr or convert_audio_data.stdout or "An unknown error occurred."
+    tk.messagebox.showerror('FFmpeg Error', f"{os.path.basename(SFDfilepath.get())} could not be extracted, and FFmpeg gave the following error:\n\n{audio_conversion_error_message}")
+ print("Converting video/audio data... DONE!", end='\n')
+   
+ #Combine extracted audio tracks into one file.
+ if not disableaudio.get() == 1:
+  print("Combining audio tracks into one file...", end='\r')
+  list_of_converted_MP2_files_to_combine = []
+  for converted_MP2_audio_files in os.listdir(os.getcwd()):
+   if converted_MP2_audio_files.lower().endswith('.mp2'):
+    list_of_converted_MP2_files_to_combine.append(converted_MP2_audio_files)
+  converted_MP2_audio_files = ''
+
+  number_of_MP2_files_to_combine = IntVar()
+  ffmpeg_list_of_MP2_files = StringVar()
+  for converted_MP2_audio_files in list_of_converted_MP2_files_to_combine:
+   ffmpeg_list_of_MP2_files.set(ffmpeg_list_of_MP2_files.get() + f'-i "{converted_MP2_audio_files}" ')
+   number_of_MP2_files_to_combine.set(number_of_MP2_files_to_combine.get() + 1)
+
+  #Get the average RMS of all audio tracks, divide it by the total # of audio tracks to get an average RMS, to later correct the combined audio file's volume to.
+  RMS_of_all_extracted_audio_combined = IntVar()
+  RMS_average_of_all_extracted_audio = IntVar()
+  RMS_average_of_all_extracted_audio.set('0')  #Set to 0 so that when RMS_of_all_extracted_audio_combined.set() runs the first time, it doesn't give an error since it equals ''.
+  for converted_MP2_audio_files in list_of_converted_MP2_files_to_combine:  #Create a new loop so total # of MP2 files is set to it's final value.
+   try: 
+    get_RMS_of_audio = f'"{ffmpeg_exe_path}" -hide_banner -loglevel error -i "{os.getcwd() + '/' + converted_MP2_audio_files}" -loglevel info -hide_banner -nostats -filter:a volumedetect -f null NUL'
+    get_RMS_of_audio_run_command = subprocess.run(get_RMS_of_audio, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
+   except IOError as audio_RMS_find_error:
+    cleanup_files()
+    audio_conversion_error_message = get_RMS_of_audio.stderr or get_RMS_of_audio.stdout or "An unknown error occurred."
+    tk.messagebox.showerror('FFmpeg Error', f"{os.path.basename(SFDfilepath.get())} could not be extracted, and FFmpeg gave the following error:\n\n{audio_conversion_error_message}")
+   
+   get_RMS_of_audio_find_RMS_volume_info = int(round(float(((get_RMS_of_audio_run_command.stderr.split('mean_volume: ')[1]).split('dB')[0]).strip())))  #Convert to float, then round before converting to int, to prevent a ValueError
+   RMS_of_all_extracted_audio_combined.set(RMS_average_of_all_extracted_audio.get() + get_RMS_of_audio_find_RMS_volume_info)
+  RMS_average_of_all_extracted_audio.set(RMS_of_all_extracted_audio_combined.get() / number_of_MP2_files_to_combine.get())
+  
+  combine_audio_to_one_file=f'"{ffmpeg_exe_path}" {ffmpeg_list_of_MP2_files.get().strip()} -b:a 320k -bitexact -filter_complex "amix=inputs={number_of_MP2_files_to_combine.get()}:duration=longest:normalize=1" allaudio.mp2'
+  subprocess.run(combine_audio_to_one_file, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
+  print("Combining audio tracks into one file... DONE!", end='\n')
 
 
- ffplaycmd=f'"{ffplay_exe_path}" {programresolution.get()} {aspectratio.get()} sfdwithaudio.mpeg'
- subprocess.run(ffplaycmd, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
+ print("Combining video and audio to one file...", end='\r')
+ #Combine the now-single audio track into the video.
+ if disableaudio.get() == 1:
+  os.rename((os.getcwd() + f'/video.mpg'), 'SFD.mpg')
+ else:
+  try:
+   combine_video_and_audio=f'"{ffmpeg_exe_path}" -hide_banner -loglevel error -i video.mpg -i allaudio.mp2 -c:v copy -c:a copy SFD.mpg'
+   subprocess.run(combine_video_and_audio, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
+  except IOError as video_audio_combine_error:
+    cleanup_files()
+    video_and_audio_combine_error_message = combine_video_and_audio.stderr or combine_video_and_audio.stdout or "An unknown error occurred."
+    tk.messagebox.showerror('FFmpeg Error', f"{os.path.basename(SFDfilepath.get())} could not be extracted, and FFmpeg gave the following error:\n\n{video_and_audio_combine_error_message}")
+ print("Combining video and audio to one file... DONE!", end='\n')
+
+
+ print("Doing final cleanups...", end='\r')
+ #Remove old files that aren't the new .MPG file
+ for conversion_files in os.listdir(os.getcwd()):
+  if conversion_files.lower().endswith(('.mpg', '.mp2', '.aix', '.adx', '.sfa', '.ac3', '.m1v', '.m2v')):
+   if not conversion_files.lower() == 'sfd.mpg':
+    os.remove(conversion_files)
+ print("Doing final cleanups... DONE!", end='\n')
+
+ try:
+  ffplaycmd=f'"{ffplay_exe_path}" {programresolution.get()} {aspectratio.get()} SFD.mpg'
+  subprocess.run(ffplaycmd, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
+ except IOError as FFplay_error:
+    cleanup_files()
+    video_and_audio_playback_error_message = ffplaycmd.stderr or ffplaycmd.stdout or "An unknown error occurred."
+    tk.messagebox.showerror('FFplay Error', f"{os.path.basename(SFDfilepath.get())} could not be played, and FFplay gave the following error:\n\n{video_and_audio_playback_error_message}")
  print("")
 
-
- if os.path.isfile('sfd.sfd'):
-  os.remove('sfd.sfd')
- if os.path.isfile('sfdwithaudio.mpeg'):
-  os.remove('sfdwithaudio.mpeg')
- if os.path.isfile('sfd.mpeg'):
-  os.remove('sfd.mpeg')
- if os.path.isfile('audio.mp3'):
-  os.remove('audio.mp3')
-
-
- if os.path.exists(sfdfolder):
-  shutil.move(sfdfolder, os.getcwd())
-  os.removedirs('sfdfile')
-
+ string_of_audio_tracks_to_extract_for_command.set('')  #Reset this to fix a bug where it would just keep adding the numbers to the string, even if user has removed them from the combobox.
+ cleanup_files()
  return
 
 
-def opendocspdf():
- sfdplayerdocs = os.getcwd() + '/resource/docs/documentation.pdf'
- os.startfile(sfdplayerdocs)
-
-chooseSFD = Button(text="Browse", command=selectvideo, padx=45, pady=5).place(x=10, y=55)
-playSFD = Button(text="Play SFD", command=playvideo, state=tk.DISABLED, padx=40, pady=5)
-playSFD.place(x=155, y=55) #leave seperate to fix issue with "None"
-opendocs = Button(text="Documentation", command=opendocspdf, padx=93).place(x=10, y=95) #padx=22
-
-def toggleplaybutton():
- if sfdfilepath.get() == '':
-  playSFD.config(state=tk.DISABLED)
- else:
-  playSFD.config(state=tk.NORMAL)
-
-vbitrate = StringVar()
-vidbitrateselect = Label(text="Video Bitrate:", font = ("Arial Bold", 8)).place(x=4700, y=87)
-videobitrateentry = ttk.Entry(textvariable=vbitrate, width=15)
-videobitrateentry.place(x=5000, y=105)
-vbitratevalue = f'-b:a {vbitrate.get()}'
-
-audtrackselect = Label(text="Use Audio Track:", font = ("Arial Bold", 8)).place(x=179, y=8)
-audiotracktype=IntVar(master, "1")
-audiomap.set('0:a:0')
-audiotracknumber.set('1')
-
-OPTIONS_audiotracktype = ["Track 1", "Track 2", "Track 3", "Track 4"]
-comboboxaudiotracktype = StringVar()
-audiotracktypebox = ttk.Combobox(master, value=OPTIONS_audiotracktype, width=12)
-audiotracktypebox.place(x=182, y=25)
-audiotracktypebox.current(0)
-audiotracktypebox.state(["readonly"])
-
-def updateaudiotracktype(event):
-   audiotracktypebox.selection_clear()
-   selectedaudiotracktype = audiotracktypebox.get()
-   if selectedaudiotracktype == "Track 1":
-    audiotracktype.set("1")
-    audiomap.set('0:a:0')
-    audiotracknumber.set('1')
-    audiotracktypebox.selection_clear()
-   elif selectedaudiotracktype == "Track 2":
-    audiotracktype.set("2")
-    audiomap.set('0:a:1')
-    audiotracknumber.set('2')
-    audiotracktypebox.selection_clear()
-   elif selectedaudiotracktype == "Track 3":
-    audiotracktype.set("3")
-    audiomap.set('0:a:2')
-    audiotracknumber.set('3')
-    audiotracktypebox.selection_clear()
-   elif selectedaudiotracktype == "Track 4":
-    audiotracktype.set("4")
-    audiomap.set('0:a:3')
-    audiotracknumber.set('4')
-    audiotracktypebox.selection_clear()
-audiotracktypebox.bind("<<ComboboxSelected>>", updateaudiotracktype)
-
-
-disableaudio = IntVar()
-def toggleaudiotrackselector():
- if disableaudio.get() == 1:
-  audiotracktypebox.config(state=tk.DISABLED)
- else:
-  audiotracktypebox.config(state=tk.NORMAL)
-  audiotracknumber.set('1')
-  audiomap.set('0:a:0')
-
-disableaudiocheck = ttk.Checkbutton(text='Disable audio', variable=disableaudio, command=toggleaudiotrackselector, onvalue=1, offvalue=0)
-disableaudiocheck.place(x=10, y=10)
-disableaudio.set(1)
-disableaudio.set(0)
-
-def changeffplayresolution():
- if playatoriginalresolution.get() == 1:
-  programresolution.set('')
- else:
-  programresolution.set('-x 640 -y 400')
-
-playatoriginalresolution = IntVar()
-playatoriginalresolutioncheck = ttk.Checkbutton(text="Play at original resolution", variable=playatoriginalresolution, command=changeffplayresolution, onvalue=1, offvalue=0)
-playatoriginalresolutioncheck.place(x=10, y=27)
-playatoriginalresolution.set(1)
-playatoriginalresolution.set(0)
-
-
-def removefiles():
- if os.path.isfile('sfd.sfd'):
-  os.remove('sfd.sfd')
- else:
-  pass
- if os.path.isfile('sfdwithaudio.mpeg'):
-  os.remove('sfdwithaudio.mpeg')
- else:
-  pass
- if os.path.isfile('audio.mp3'):
-  os.remove('audio.mp3')
- else:
-  pass
- if os.path.isfile('sfd.mpeg'):
-  os.remove('sfd.mpeg')
- else:
-  pass
- #if os.path.exists(sfdfolder):
-  #shutil.move(sfdfolder, os.getcwd())
-  #os.removedirs('sfdfile')
-
+def cleanup_files():
+ for conversion_files in os.listdir(os.getcwd()):
+  if conversion_files.lower().endswith(('.mpg', '.mp2', '.aix', '.adx', '.sfa', '.ac3', '.m1v', '.m2v')):
+   os.remove(conversion_files)
 
 def closeprogram():
-  os.system("taskkill /f /im ffplay.exe")
+  if "taskkill /f /im ffplay.exe" == True:
+   os.system("taskkill /f /im ffplay.exe")
   os._exit(0)
 
 def updater_exe():
- updaterlocation = os.getcwd() + '/updater.exe'
- if os.path.isfile(updaterlocation):
-  runupdater = f'"{updaterlocation}"'
-  subprocess.run(runupdater, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
- else:
-  print("Unable to find updater.exe, program will not be able to update.")
-  pass
+ check_for_new_SofdecVideoTools_version()
  
-run_ffmpeg_check()  #Set up FFmpeg location ints
-
-
-removefiles() #Run removefiles() to delete any files that are left over on program boot.
+cleanup_files() #Delete any files that are left over on program boot, moreso in case program crashes and doesn't clean up files.
 updater_exe()
+print("")
+run_ffmpeg_check()  #Set up FFmpeg location ints
+print("")
+gui_elements()
 
-atexit.register(removefiles)
+atexit.register(cleanup_files)
 atexit.register(closeprogram)
 
 master.mainloop()

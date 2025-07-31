@@ -7,13 +7,14 @@ import subprocess
 from PIL import Image, ImageTk
 from tkinter import filedialog, ttk, messagebox, Frame, LabelFrame, Label, StringVar, Button, Toplevel, IntVar
 
-#Make sure you have check_for_ffmpeg.py in the same folder as this PY file, or else the program won't work.
+#Make sure you have check_for_ffmpeg.py and updater.py in the same folder as this PY file, or else the program won't work.
 from check_for_ffmpeg import ffmpeg_location_int, ffprobe_location_int, run_ffmpeg_check, update_ffmpeg
+from updater import check_for_new_SofdecVideoTools_version
 
 
 #GUI Main Menu Window/Frames
 master = tk.Tk()
-master.geometry("600x450"), master.title("SFDCreator V1.0.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdextractor.ico")
+master.geometry("600x450"), master.title("SFDCreator V2.0.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdextractor.ico")
 dirframe = LabelFrame(master, text="Input Files")
 dirframe.place(relx=0.010, rely=0.0, relheight=0.365, relwidth=0.980) #leave this .place seperate from the "dirframe =" to avoid position issue.
 outputdirframe = LabelFrame(master, text="Output File").place(relx=0.010, rely=0.37, relheight=0.368, relwidth=0.980)
@@ -138,8 +139,6 @@ def gui_elements_mainmenu():
  #Open GitHub/About Program functions
  def opengithubrepo():
   webbrowser.open("https://github.com/Firebow59/SofdecVideoTools")
- def openissuespage():
-  webbrowser.open("https://github.com/Firebow59/SofdecVideoTools/issues")
  def aboutprogram():
   link = 'This tool is intended for creating Sofdec video files (or SFD files for short) for use in various games. Developed by Firebow59.'
   aboutprogramwindow = tk.messagebox.showinfo(title='About Program', message=link)
@@ -161,36 +160,18 @@ def gui_elements_mainmenu():
  
 
  #SFD Version Detector help menu
- global helpinfo_sfdversion_window
- helpinfo_sfdversion_window = tk.Tk()  #Draw menu on boot to prevent "Doesn't exist" errors
- helpinfo_sfdversion_window.withdraw()
  def help_determine_sfd_version_functions():
   global show_help_determine_sfd_version
   def show_help_determine_sfd_version(*args):
-   #Set up window, find X and Y values where window should be placed - relative to the question mark icon next to the SFD Version/Muxer text.
-   #Add 30 to X value to push it to the right side of the question mark
-   questionmark_sfd_muxer_help_label_find_x_value = questionmark_sfd_muxer_help_label.winfo_rootx() + 30
-   questionmark_sfd_muxer_help_label_find_y_value = questionmark_sfd_muxer_help_label.winfo_rooty()
-   helpinfo_sfdversion_window.geometry(f'232x55+{questionmark_sfd_muxer_help_label_find_x_value}+{questionmark_sfd_muxer_help_label_find_y_value}') #Last 2 values on geometry = X/Y placement of window
-  
-   helpinfo_sfdversion_window.resizable(False, False)
-   helpinfo_sfdversion_window.overrideredirect(True)  #Hide top bar of window
-   find_SFD_version_label = Label(helpinfo_sfdversion_window, text="Unsure which muxer to use? Click here:", font=("Arial Bold", 8))
-   find_SFD_version_open_findversion_window = Button(helpinfo_sfdversion_window, text="Determine SFD Version", command=find_sfd_version_main_window).place(x=50, y=22.5)
-   find_SFD_version_label.place(x=2, y=2)  #Leave .place seperate to avoid error with bind
-   helpinfo_sfdversion_window.deiconify()  #Reshow help window, do last to prevent flashing
-
-  global close_help_determine_sfd_version
-  def close_help_determine_sfd_version(*args):
-   helpinfo_sfdversion_window.withdraw()
-   master.focus_set()
+   ask_for_version_detector_check = tk.messagebox.askyesno(title='Unsure what SFD muxer to choose?', message='Do you want to run the Version Detector to find the correct SFD muxer for your project?\n\n(NOTE: a sample SFD from the game/app you want to encode the SFD for will be needed.)')
+   if ask_for_version_detector_check == True:
+    find_sfd_version_main_window()
 
 
  global helpmenu_find_sfd_version_window
  helpmenu_find_sfd_version_window = tk.Tk()
  helpmenu_find_sfd_version_window.withdraw()
  def find_sfd_version_main_window(*args):
-   helpinfo_sfdversion_window.withdraw()  #Hide the info window when main Version Detector window is opened
    helpmenu_find_sfd_version_window = tk.Tk()
    helpmenu_find_sfd_version_window.geometry('520x280'), helpmenu_find_sfd_version_window.title('Find SFD Version'), helpmenu_find_sfd_version_window.resizable(False, False)
    helpmenu_find_sfd_version_window.tkraise()  #Set focus to helpmenu window/make it appear on top
@@ -306,21 +287,17 @@ def gui_elements_mainmenu():
  questionmark_sfd_muxer_help_label = Label(outputdirframe, image=questionmark_sfd_muxer_help_image)
  questionmark_sfd_muxer_help_label.image = questionmark_sfd_muxer_help_image
  questionmark_sfd_muxer_help_label.place(x=565, y=285)  #Leave .place seperate to avoid error with bind
- helpinfo_sfdversion_window.focus_set()  #Set focus to help window so it displays on top
  
- questionmark_sfd_muxer_help_label.bind("<Enter>", show_help_determine_sfd_version)  #If user enters the area of the question mark icon, run the help window
- questionmark_sfd_muxer_help_label.bind("<Button-1>", close_help_determine_sfd_version)  #If user left clicks on the question mark icon, close the help window
+ questionmark_sfd_muxer_help_label.bind("<Button-1>", show_help_determine_sfd_version)  #If user left clicks the question mark icon, run the help window
 
 
  #GUI buttons/checkboxes
  SFDmuxerbtn = Button(text="Create the SFD!", command=createSFD, padx=80, pady=15)
- #Change .place in change_SFDmuxerbtn_batch() for change to occur too
- SFDmuxerbtn.place(x=345, y=363)     #.place(x=345, y=363) #Keep seperate so change_SFDmuxerbtn_batch() works
+ SFDmuxerbtn.place(x=345, y=363)
  extraoptions = Button(text="Extra Options", command=show_extraoptionswindow, padx=36.3, pady=1).place(x=12, y=354)
  opengithubrepobtn = Button(text="Open GitHub Repo", command=opengithubrepo, padx=23, pady=1).place(x=173, y=354)
  aboutcreator = Button(text="About Program", command=aboutprogram, padx=30.4, pady=1).place(x=12, y=384)
  programdocuments = Button(text="Documentation", command=docs, padx=30.3, pady=1).place(x=12, y=414)
- #presetbtn = Button(text="Save/Load Preset", command=openpresetwindow, padx=28, pady=1).place(x=173, y=384)
 
  global UseVideoAudio
  global UseTrack1forTrack2
@@ -328,19 +305,6 @@ def gui_elements_mainmenu():
  videoaudiocheck = ttk.Checkbutton(text='Use Audio from Input Video', variable=UseVideoAudio, command=videoaudio, onvalue=1, offvalue=0).place(x=12, y=137)
  UseTrack1forTrack2 = IntVar()
  track1fortrack2check = ttk.Checkbutton(text='Use Track 1 Audio for Track 2', variable=UseTrack1forTrack2, command=copyaudio, onvalue=1, offvalue=0).place(x=192, y=137)
-
-
- batchmode = IntVar()
- def change_SFDmuxerbtn_batch(*args):
-  if batchmode.get() == 1:
-   SFDmuxerbtn.config(text="Add to List!", command=write_batchmode_info_tofile, padx=25)
-  else:
-   SFDmuxerbtn.config(text="Create the SFD!", command=createSFD)
-  SFDmuxerbtn.place(x=345, y=363)
- batchmode.trace('w', change_SFDmuxerbtn_batch)
- change_SFDmuxerbtn_batch() #Run on boot so that SFD button exists
- #batchmodecheck = ttk.Checkbutton(text='Enable Batch Mode', variable=batchmode, command=change_SFDmuxerbtn_batch, onvalue=1, offvalue=0).place(x=405, y=410)
-
 
 
 
@@ -707,7 +671,6 @@ def gui_elements_mainmenu():
 
  #Muxer Selector
  OPTIONS_streamtype = ["Select a muxer:", "V1 (SFDMUX V1.0.0)", "V1 (SFDMUX V1.0.1b)", "V1 (SFDMUX V1.07)", "V1 (nebulas-star's muxer)", "V1 (CRAFT, V2.98)", "V2 (muxer by ThisKwasior)"]
- #OPTIONS_streamtype = ["No muxer (create converted files)", "V1 (SFDMUX V1.0.0)", "V1 (SFDMUX V1.0.1b)", "V1 (SFDMUX V1.07)", "V1 (nebulas-star's muxer)", "V1 (CRAFT, V2.98)", "V2", "Use External Muxer"]
  comboboxstreamtype = StringVar()
  streamtypebox = ttk.Combobox(master, value=OPTIONS_streamtype, textvariable=comboboxstreamtype, width=23)
  streamtypebox.place(x=421, y=302)
@@ -716,7 +679,6 @@ def gui_elements_mainmenu():
 
  def update_streamtype(*args):
   selected_streamtypevalue = comboboxstreamtype.get()
-  #if selected_streamtypevalue == "No muxer (only create converted files)":
   if selected_streamtypevalue == "Select a muxer:":
    comboboxstreamtype.set(OPTIONS_streamtype[0])
    sofdecstreamtype.set("0")
@@ -747,11 +709,6 @@ def gui_elements_mainmenu():
    comboboxstreamtype.set(OPTIONS_streamtype[6])
    sofdecstreamtype.set("6")
    streamtypebox.selection_clear()
-  if selected_streamtypevalue == "Use External Muxer":
-   comboboxstreamtype.set(OPTIONS_streamtype[7])
-   sofdecstreamtype.set("7")
-   show_externalSFDmuxerwin()
-   streamtypebox.selection_clear()
  streamtypebox.bind("<<ComboboxSelected>>", update_streamtype)
  sofdecstreamtype.set('0')
 
@@ -776,99 +733,6 @@ def gui_elements_mainmenu():
    enable_video_scale_options()
  streamtypebox.bind("<<ComboboxSelected>>", update_menu_when_muxer_selected)
  update_menu_when_muxer_selected()  #Run intially
-
-
-
-def useexternalSFDmuxer():
- global externalSFDmuxer_window
- externalSFDmuxer_window = Toplevel(master)
- externalSFDmuxer_window.geometry("250x355"), externalSFDmuxer_window.title("External SFD Muxer Window"), externalSFDmuxer_window.resizable(False, False)
- #externalSFDmuxer_window.geometry("250x375")
- 
- externalcustommuxer_file_list = StringVar()
- def choosemuxer_files():
-  muxer_selected_files_list = []
-  global external_sfdmuxer
-  external_sfdmuxer = filedialog.askopenfilenames(title='Choose an SFD muxer (+ any other files it requires)')
-  for files in external_sfdmuxer:
-   files_name = os.path.basename(files)
-   muxer_selected_files_list.append(files_name)
-  externalcustommuxer_file_list.set(", ".join(muxer_selected_files_list))
-  print(f"Files selected (for external muxer): {externalcustommuxer_file_list.get()}")
-  print("")
-  externalSFDmuxer_window.focus()
-
-
- global useexternalsfdmuxer
- useexternalsfdmuxer = IntVar()
- choosemuxer_filesbtn = Button(externalSFDmuxer_window, text="Choose Muxer Files", command=choosemuxer_files, padx=37, pady=2)
- choosemuxer_filesbtn.place(x=32.5, y=32)
-
- custommuxer_videoformatlabel = Label(externalSFDmuxer_window, text="Video Format:", font=("Arial Bold", 8)).place(x=27, y=75)
- OPTIONS_externalmuxer_videoformat = ["MPEG", "M1V", "Other (please specify)"]
- externalmuxer_videoformat = StringVar()
- externalmuxer_videoformatcombobox = ttk.Combobox(externalSFDmuxer_window, value=OPTIONS_externalmuxer_videoformat, textvariable=externalmuxer_videoformat, width=20)
- externalmuxer_videoformatcombobox.place(x=30, y=93)
-
- custommuxer_audioformatlabel = Label(externalSFDmuxer_window, text="Audio Format:", font=("Arial Bold", 8)).place(x=27, y=125)
- OPTIONS_externalmuxer_audioformat = ["ADX", "SFA", "Other (please specify)"]
- externalmuxer_audioformat = StringVar()
- externalmuxer_audioformatcombobox = ttk.Combobox(externalSFDmuxer_window, value=OPTIONS_externalmuxer_audioformat, textvariable=externalmuxer_audioformat, width=20)
- externalmuxer_audioformatcombobox.place(x=30, y=143)
-
- custommuxer_commandlabel = Label(externalSFDmuxer_window, text="Muxer Command:", font=("Arial Bold", 8)).place(x=27, y=175)
- externalmuxer_command = StringVar()
- externalmuxer_command_combobox = ttk.Entry(externalSFDmuxer_window, textvariable=externalmuxer_command, width=30)
- externalmuxer_command_combobox.place(x=30, y=193)
-
- def enable_chosemuxer_filesbtn(*args):
-  if useexternalsfdmuxer.get() == 1:
-    choosemuxer_filesbtn.config(state=tk.NORMAL)
-    externalmuxer_audioformatcombobox.config(state=tk.NORMAL)
-    externalmuxer_videoformatcombobox.config(state=tk.NORMAL)
-    externalmuxer_command_combobox.config(state=tk.NORMAL)
-    comboboxstreamtype.set('External Muxer Enabled')
-    comboboxstreamtype.set(OPTIONS_streamtype[7])
-    streamtypebox.config(state=tk.DISABLED)
-    sofdecstreamtype.set('7')
-    updatemenu_for_streamtype1()
-  if useexternalsfdmuxer.get() == 0:
-    choosemuxer_filesbtn.config(state=tk.DISABLED)
-    externalmuxer_audioformatcombobox.config(state=tk.DISABLED)
-    externalmuxer_videoformatcombobox.config(state=tk.DISABLED)
-    externalmuxer_command_combobox.config(state=tk.DISABLED)
-    
-    #Reset back to "Select a muxer:" (default)
-    sofdecstreamtype.set('0')
-    comboboxstreamtype.set(OPTIONS_streamtype[0])
-    streamtypebox.config(state=tk.NORMAL)
-    updatemenu_for_streamtype1()
-    externalcustommuxer_file_list.set("") #Reset muxer files list
- useexternalsfdmuxer.trace('w', enable_chosemuxer_filesbtn)
-
-
- enable_externalSFDmuxer_check = ttk.Checkbutton(externalSFDmuxer_window, text='Enable external SFD muxer', command=enable_chosemuxer_filesbtn(), variable=useexternalsfdmuxer, onvalue=1, offvalue=0)
- enable_externalSFDmuxer_check.place(x=40, y=6)
- enable_externalSFDmuxer_check.bind("<<CheckboxSelected>>", enable_chosemuxer_filesbtn)
- enable_externalSFDmuxer_check.bind("<<CheckboxDeselected>>", enable_chosemuxer_filesbtn)
-
- custommuxer_note1label = Label(externalSFDmuxer_window, text="Note: In the muxer command section, use the following values/names for the video, audio, and SFD filenames:", wraplength=240, font = ("Arial Bold", 8)).place(x=5, y=225)
- custommuxer_note1blabel = Label(externalSFDmuxer_window, text="Video = newvideo (+ extension selected above)", wraplength=250, font=("Arial", 8)).place(x=5, y=275)
- custommuxer_note1clabel = Label(externalSFDmuxer_window, text="Audio = trackX (where X is a number between 1 and 4, + extension selected above)", wraplength=250, font=("Arial", 8)).place(x=5, y=295)
- custommuxer_note1clabel = Label(externalSFDmuxer_window, text="Output SFD name = file.sfd", wraplength=250, font=("Arial", 8)).place(x=5, y=330)
-
-
- externalSFDmuxer_window.withdraw() #Hide window on boot
-
-
-def usecustomFFmpegcommands():
- global usecustomFFmpegcommandswin
- usecustomFFmpegcommandswin = Toplevel(master)
- usecustomFFmpegcommandswin.geometry("550x355"), usecustomFFmpegcommandswin.title("Custom FFmpeg Command Window"), usecustomFFmpegcommandswin.resizable(False, False)
- #externalSFDmuxer_window.geometry("250x375")
-
-
- usecustomFFmpegcommandswin.withdraw() #Hide window on boot
 
 
 def advancedopt():
@@ -913,14 +777,6 @@ def advancedopt():
    global enableKVCD_int   #Set as global to prevent auto enabled issue
    enableKVCD_int = IntVar()
    enableKVCDcheck = ttk.Checkbutton(optwin, text='Enable KVCD quantization', variable=enableKVCD_int, onvalue=1, offvalue=0).place(x=11, y=110)
-
-   global useHQM1Vcommands_int
-   useHQM1Vcommands_int = IntVar()
-   #useHQ_m1v_commandscheck = ttk.Checkbutton(optwin, text='Enable HQ M1V video commands', variable=useHQM1Vcommands_int, onvalue=1, offvalue=0).place(x=11, y=130)
-
-   global enable2PassEncoding_int  #Set as global to prevent auto enabled issue
-   enable2PassEncoding_int = IntVar()
-   #enable2PassEncodingcheck = ttk.Checkbutton(optwin, text='Enable 2-pass encoding', variable=enable2PassEncoding_int, onvalue=1, offvalue=0).place(x=11, y=150)
 
 
 
@@ -1021,13 +877,13 @@ def advancedopt():
    audiodurationstarttimelbl = Label(optwin, text="Start Time:", font=("Arial Bold", 8)).place(x=421, y=40)
    audiodurationendtimelbl = Label(optwin, text="Clip Length:", font=("Arial Bold", 8)).place(x=502, y=40)
 
-   #def enable_same_custom_duration_checkbox(*args):
-    #if enableaudioffmpegduration.get() == 1 and enablevideoffmpegduration.get() == 1:
-     #useidenticalcustomdurations_check.config(state=tk.NORMAL)
-    #else:
-     #useidenticalcustomdurations_check.config(state=tk.DISABLED)
-   #enableaudiocustomdurationcheck.bind("w", enable_same_custom_duration_checkbox)
-   #enable_same_custom_duration_checkbox()  #Call on boot
+   def enable_same_custom_duration_checkbox(*args):
+    if enableaudioffmpegduration.get() == 1 and enablevideoffmpegduration.get() == 1:
+     useidenticalcustomdurations_check.config(state=tk.NORMAL)
+    else:
+     useidenticalcustomdurations_check.config(state=tk.DISABLED)
+   enableaudiocustomdurationcheck.bind("w", enable_same_custom_duration_checkbox)
+   enable_same_custom_duration_checkbox()  #Call on boot
 
    previous_audstartdurationvalue = StringVar()
    previous_audenddurationvalue = StringVar()
@@ -1094,11 +950,6 @@ def advancedopt():
      SFDfilename.set('')
    setSFDfilenametovideofilename.trace('w', UsevideonameforSFD)
 
-   #global createsfdtofolder
-   #createsfdtofolder = IntVar()
-   #createsfdtofoldercheck = ttk.Checkbutton(optwin, text='Create SFD to folder', variable=createsfdtofolder, onvalue=1, offvalue=0)
-   #createsfdtofoldercheck.place(x=11, y=275)
-
 
 
   def misc_program_options_extraoptionswindow():
@@ -1163,93 +1014,12 @@ def advancedopt():
    showffmpegcommands.set(0)
 
 
-   #Misc Other Options/Settings
-   #useexternalsfdmuxerbtn = Button(optwin, text="Use external SFD muxer", command=show_externalSFDmuxerwin, padx=24.35, pady=1).place(x=263, y=295)
-   #customffmpegcommandsbtn = Button(optwin, text="Use custom FFmpeg commands", command=show_customFFmpegcommandwin, padx=1, pady=1).place(x=263, y=325)
-
-
   #Load settings
   keepfiles_options_extraoptionswindow()
   FFmpegsettings_extraoptionswindow()
   QoL_settings_extraoptionswindow()
   misc_program_options_extraoptionswindow()
   optwin.withdraw() #Hide window on boot
-
-
-def openpresetwindow():
- global presetwindow
- presetwindow = Toplevel(master)
- presetwindow.geometry("360x100"), presetwindow.title("Preset Window"), presetwindow.resizable(False, False)
-
- def update_filePathpreset(*args):
-  filePathpreset.set(currentdir + '/preset/' + presetselector.get())
-
- filePathpreset = StringVar()
- presetfolder = os.getcwd() + '/preset'
- presetfiles_list = [file for file in os.listdir(presetfolder) if file.endswith('.txt')]
- presetselector = ttk.Combobox(presetwindow, values=presetfiles_list, width=30)
- presetselector.place(x=5, y=15)  #Keep seperate to avoid NoneType error
- presetselector.bind("<<ComboboxSelected>>", update_filePathpreset)
- 
- 
- def openpreset():
-  preset = filedialog.askopenfilename(title="Select A Preset File", filetypes=[("Preset files", ".txt")], initialdir=presetfolder)
-  filePathpreset.set(preset)
-  presetselector.set(os.path.basename(preset))
-  presetwindow.focus() #Bring window to front after the filedialog is done
-  presetwindow.focus_set()
-
-
- def applypreset():
-  if not filePathpreset.get():
-   print("Error: No/Invalid file path provided for preset file.")
-   return
-  else:
-   try:
-    with open(filePathpreset.get(), 'r') as presetfile:
-     presetfile_lines = presetfile.readlines()
-
-     #Remember to minus 1 off of each number compared to preset file, since this starts at 0.
-
-     #Get SFD muxer first to determine which settings (V2 or V1 settings) to use
-     sfdmuxer_readpreset = presetfile_lines[11].split('=')[1]
-     if sfdmuxer_readpreset == 'N/A':
-       pass
-     else:
-      #Update menu for V1 encoding if SFDmuxer equals 2 or 4
-      if int(sfdmuxer_readpreset) == 2:  #Call as int or otherwise doesn't work.
-        streamtypebox.set("V1 (SFDMUX V1.07)")
-      elif int(sfdmuxer_readpreset) == 4:
-        streamtypebox.set("V1 (V1.01b w/header patch)")
-      update_streamtype()
-
-     #Get SFD muxer first to determine which settings (V2 or V1 settings) to use
-     videoresolution_readpreset = presetfile_lines[1].split('=')[1]
-     if videoresolution_readpreset == 'N/A':
-       pass
-     else:
-      if int(sfdmuxer_readpreset) == 2 or int(sfdmuxer_readpreset) == 4:  #Check if V1 file to bring up the correct options
-       comboboxvres_streamtype1.set(str(videoresolution_readpreset))
-       input(f'videoresolution_readpreset: {str(videoresolution_readpreset)}')
-       updatevres_streamtype1()
-      else:
-       videoresolution_list = ["Same as Video", "320x240", "426x240", "480x360", "640x360", "640x480", "848x480", "960x720", "1280x720", "1920x1080", "1440x1080"]
-       if not videoresolution_readpreset in videoresolution_list:
-        print('s')
-       else:
-        print('y')
-
-
-   except Exception as e:
-     print("An error occurred:", e)
-     
-
- def createpreset():
-  print('makepreset')
-
- openpresetbtn = Button(presetwindow, text="Open File", command=openpreset, padx=37, pady=2).place(x=220, y=12)
- applypresetbtn = Button(presetwindow, text="Apply Preset", command=applypreset, padx=40, pady=2).place(x=5, y=65)
- createpresetbtn = Button(presetwindow, text="Create New Preset", command=createpreset, padx=38, pady=2).place(x=175, y=65)
 
 
 def extraaudiotracks():
@@ -1651,13 +1421,8 @@ def createSFD():
     else:
       bitexactcmd.set('')
 
-    if useHQM1Vcommands_int.get() == 1:
-     HQM1Vcommands.set('-bf 0 -g 1 -b:v')
-    else:
-     HQM1Vcommands.set('')
-
     if enableKVCD_int.get() == 1:
-     KVCD_cmd.set('-intra_matrix "8,16,19,22,26,27,29,34,16,16,22,24,27,29,34,37,19,22,26,27,29,34,34,38,22,22,26,27,29,34,37,40,22,26,27,29,32,35,40,48,26,27,29,32,35,40,48,58,26,27,29,34,38,46,56,69,27,29,35,38,46,56,69,83" -inter_matrix "16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16"')
+     KVCD_cmd.set('-intra_matrix "8,16,19,22,26,27,29,34,16,16,22,24,27,29,34,37,19,22,26,27,29,34,34,38,22,22,26,27,29,34,37,40,22,26,27,29,32,35,40,48,26,27,29,32,35,40,48,58,26,27,29,34,38,46,56,69,27,29,35,38,46,56,69,83" -inter_matrix "8,16,19,22,26,27,29,34,16,16,22,24,27,29,34,37,19,22,26,27,29,34,34,38,22,22,26,27,29,34,37,40,22,26,27,29,32,35,40,48,26,27,29,32,35,40,48,58,26,27,29,34,38,46,56,69,27,29,35,38,46,56,69,83"')
 
 
     if enablevideoffmpegduration.get() == 1:
@@ -1684,21 +1449,6 @@ def createSFD():
    if cancelcreation.get() == 1:
     return
    setupforSFDcreation()
-
-
-   def use_and_run_externalmuxer():
-    global muxer_files
-    muxer_files = []
-    for files in external_sfdmuxer:
-     files_name = os.path.basename(files)
-     muxer_files_tempfolder = currentdir + '/MUXER'
-     if not os.path.exists(muxer_files_tempfolder):
-      os.mkdir(muxer_files_tempfolder)
-     externalmuxer_copypath = os.path.join(muxer_files_tempfolder, files_name)
-     shutil.copy(files, externalmuxer_copypath)
-     muxer_files.append(externalmuxer_copypath)
-   if useexternalsfdmuxer == 1:
-    use_and_run_externalmuxer()
 
 
 
@@ -1748,15 +1498,8 @@ def createSFD():
      return
    
     print("Converting video to MPEG...")
-    if enable2PassEncoding_int.get() == 1:
-      convert_mpeg_pass_1_cmd=f'"{ffmpeg_exe_path}" {FFmpeg_onlyprinterrors_cmd.get()} -y -i AVIconvert.avi -crf {crfvalue.get()} {framerate.get()} {vratio.get()} {ffmpegstartdurationcmd.get()} {HQM1Vcommands.get()} -b:v {vbitrate.get()} {KVCD_cmd.get()} -c:v mpeg1video -pass 1 -f null /dev/null && /'
-      convert_mpeg_pass_2_cmd=f'"{ffmpeg_exe_path}" {FFmpeg_onlyprinterrors_cmd.get()} -y -i AVIconvert.avi -crf {crfvalue.get()} {framerate.get()} {vratio.get()} {ffmpegstartdurationcmd.get()} {HQM1Vcommands.get()} -b:v {vbitrate.get()} {KVCD_cmd.get()} -c:v mpeg1video -pass 2 newvideo.{outputmpegextension.get()}'
-      #Share same run command name so that errors are caught.
-      convert_mpeg_cmd_runcommand = subprocess.run(convert_mpeg_pass_1_cmd, **subprocessoptions)
-      convert_mpeg_cmd_runcommand = subprocess.run(convert_mpeg_pass_2_cmd, **subprocessoptions)
-    else:
-     convert_mpeg_cmd=f'"{ffmpeg_exe_path}" {FFmpeg_onlyprinterrors_cmd.get()} -y -i AVIconvert.avi -crf {crfvalue.get()} {framerate.get()} {vratio.get()} {ffmpegstartdurationcmd.get()} {HQM1Vcommands.get()} -b:v {vbitrate.get()} {KVCD_cmd.get()} -c:v mpeg1video newvideo.{outputmpegextension.get()}'
-     convert_mpeg_cmd_runcommand = subprocess.run(convert_mpeg_cmd, **subprocessoptions)
+    convert_mpeg_cmd=f'"{ffmpeg_exe_path}" {FFmpeg_onlyprinterrors_cmd.get()} -y -i AVIconvert.avi -crf {crfvalue.get()} {framerate.get()} {vratio.get()} {ffmpegstartdurationcmd.get()} {HQM1Vcommands.get()} -b:v {vbitrate.get()} {KVCD_cmd.get()} -c:v mpeg1video newvideo.{outputmpegextension.get()}'
+    convert_mpeg_cmd_runcommand = subprocess.run(convert_mpeg_cmd, **subprocessoptions)
     if not convert_mpeg_cmd_runcommand.returncode == 0:
       cancelcreation.set(1)
       print("MPEG video conversion failed, canceling SFD creation...")
@@ -2412,35 +2155,6 @@ def createSFD():
    #return
 
 
-def write_batchmode_info_tofile():
-  batch_txtfile = os.path.join(currentdir, 'resource/batch/batch.txt')
-  batchmode_firstrun_int = IntVar()
-
-  #Delete old batch txt file if it exists, and create the new txt file.
-  if os.path.isfile(batch_txtfile):
-   if batchmode_firstrun_int.get() == 1:
-    pass
-   else:
-    os.remove(batch_txtfile)
-    batchmode_firstrun_int.set(1)
-   with open(batch_txtfile, "w") as batchfile:
-    batchfile.close()
-
-  if os.path.isfile(batch_txtfile):
-   with open(batch_txtfile, "a") as batchfile:
-    batchfile.write(f"videofilepath={filePathvideo.get()}\n")
-    batchfile.write(f"track1filepath={filePathaudt1.get()}\n")
-    batchfile.write(f"track2filepath={filePathaudt2.get()}\n")
-    batchfile.write(f"track3filepath={filePathaudt3.get()}\n")
-    batchfile.write(f"track4filepath={filePathaudt4.get()}\n")
-    batchfile.write(f"outputdirectory={dirPath.get()}\n")
-    batchfile.write(f"sofdecmuxer={sofdecstreamtype.get()}\n")
-    batchfile.write(f"sfdfilename={SFDfilename.get()}\n")
-  else:
-   print("Error: batch.txt does not exist.")
-   return
-
-
 #Hide/Show/Load GUI sub-windows
 def show_extraoptionswindow():
  optwin.deiconify()
@@ -2448,52 +2162,30 @@ def show_extraoptionswindow():
 def show_extraaudiotrackswin():
   extraaudiotrackswin.deiconify()
 
-def show_externalSFDmuxerwin():
-  externalSFDmuxer_window.deiconify()
-
-def show_customFFmpegcommandwin():
- usecustomFFmpegcommandswin.deiconify()
-
 def hide_subwindows(): #Hide window(s) so that sub-windows can't be opened different multiple times.
  extraaudiotrackswin.withdraw()
- externalSFDmuxer_window.withdraw()
- usecustomFFmpegcommandswin.withdraw()
  optwin.withdraw()
 
 
 gui_elements_mainmenu() #Load GUI elements (for main menu)
 advancedopt()
 extraaudiotracks()
-useexternalSFDmuxer()
-usecustomFFmpegcommands()
-externalSFDmuxer_window.protocol("WM_DELETE_WINDOW", hide_subwindows) #Hide window (until if opened later)
 optwin.protocol("WM_DELETE_WINDOW", hide_subwindows)
 extraaudiotrackswin.protocol("WM_DELETE_WINDOW", hide_subwindows)
-usecustomFFmpegcommandswin.protocol("WM_DELETE_WINDOW", hide_subwindows)
 
 def close_helpmenu_windows_and_exit(*args):
  if helpmenu_find_sfd_version_window.winfo_exists():
   helpmenu_find_sfd_version_window.destroy()
-
- if helpinfo_sfdversion_window.winfo_exists():
-  helpinfo_sfdversion_window.destroy()
- 
- #master.after(200)
  os._exit(0)
 master.protocol("WM_DELETE_WINDOW", close_helpmenu_windows_and_exit)
 
 
 #Check for program updates, check for FFmpeg programs, and set up FFmpeg/FFprobe EXE paths.
 def updater_exe():
- updaterlocation = os.getcwd() + '/updater.exe'
- if os.path.isfile(updaterlocation):
-  runupdater = f'"{updaterlocation}"'
-  runupdater_subprocess_cmd = subprocess.run(runupdater, shell=True, capture_output=True, text=True)
- else:
-  print("Unable to find updater.exe, program will not be able to update.")
-  pass
-updater_exe()  #Run on boot
+ check_for_new_SofdecVideoTools_version()
 
+updater_exe()
+print("")
 run_ffmpeg_check()  #Set up ffmpeg_location_int and ffprobe_location_int on boot
 print("")
 
@@ -2535,17 +2227,12 @@ def cleanup_files():
  return
 
 
-#def checkfiles():
- #cleanup_files()
- #if useexternalsfdmuxer.get() == 1:
-  #os.remove(muxer_files)
-
-#def closeprogram():
- #killffmpeg = 'taskkill /F /IM ffmpeg.exe'
- #os.system(killffmpeg)
- #os._exit(0)
+def closeprogram():
+ killffmpeg = 'taskkill /F /IM ffmpeg.exe'
+ os.system(killffmpeg)
+ os._exit(0)
 
 atexit.register(cleanup_files)
-#atexit.register(closeprogram)
+atexit.register(closeprogram)
 cleanup_files() #Run on boot to clean up any files if any where missed due to crash, program closing, etc.
 master.mainloop()

@@ -6,8 +6,12 @@ from tkinter import IntVar, messagebox, StringVar, Button, filedialog, ttk
 import argparse
 import sys
 
+#Make sure you have updater.py in the same folder as this PY file, or else the program won't work.
+from updater import check_for_new_SofdecVideoTools_version
+
+
 master = tk.Tk()
-master.geometry("300x130"), master.title("SFDVersionDetector V1.0.0"), master.resizable(False, False)
+master.geometry("300x130"), master.title("SFDVersionDetector V2.0.0"), master.resizable(False, False)
 
 currentdir = os.getcwd()
 
@@ -79,7 +83,7 @@ def findversion():
  def determine_SFD_version():
   with open(SFDfile_to_read.get(), 'rb') as SFD_file_openfile:
    SFD_file_openfile.seek(0x0)
-   SFD_file_binarydata = SFD_file_openfile.read()
+   SFD_file_binarydata = SFD_file_openfile.read(0x3000) #Most SFDs headers are between 0x1000 and 0x2000, but set to 0x3000 just in case a SFD header is a bit lower down.
 
    try:
     #Check if V2 SFD
@@ -90,15 +94,6 @@ def findversion():
      else:
       sys.stdout.write(f'"{SFDname.get()}" is a V2 SFD.\n')
      SFD_file_openfile.close()
-    
-
-#TODO
-#STILL NEED TO FINISH WITH ERRORS IF THEY DONT EXIST (for file checks in findversion())
-#FIX BUG WHERE IF YOU CHANGE OFF OF BATCH MODE AFTER SELECTING FOLDER, PLAY BUTTON doesn't lock again (since need to choose new directory kinda thing)
-#  - basically in batch mode changes, relock button
-#Add code for writing info to txt file
-# NEED TO MAKE IT SO IF BOOTING FROM CMD, ADD ANOTHER TOGGLE FOR THE "DONE" text
-
 
 
     #Check if V1 SFD
@@ -144,10 +139,10 @@ def findversion():
 
 
     else:  #No "SofdecStream"/SFDMUX header = V1.0.0
-     #Since (what I assume are) V1.0.0 files (the original muxer from a DC Dev Kit is completely broken on Windows 10, so unable to test to make sure) 
-     #seem to always have their header removed. Thus, attempt to check for (c)CRI string at 0x1938 and 0x1138.
+     #Since (what I assume are) V1.0.0 files (the original muxer doesn't add any data headers onto the file data) seem to always have their header removed, 
+     #attempt to check for (c)CRI string at 0x1938 and 0x1138.
      #0x1938 was found in some DC games such as "Pen Pen Triicelon", "July", and "Godzilla Generations".
-     #0x1138 was found in the Dreamcast version of "Sonic Adventure".
+     #0x1138 was found in the Dreamcast version of "Sonic Adventure". (ex. "SA1_600.SFD")
      
      print("")
      if onlyprintmuxerinfo.get() == 1:
@@ -156,39 +151,54 @@ def findversion():
       if onlyprintmuxerinfo.get() == 1:
        pass
       else:
-       print(f"Unable to find SofdecStream/SFDMUX header for SFD file, checking if {SFDname.get()} is a V1.0.0 SFD...")
+       print(f"Unable to find SofdecStream/SFDMUX header for {SFDname.get()}, checking if {SFDname.get()} is a V1.0.0 SFD...")
     
-     #Check 0x1938
-     SFD_file_openfile.seek(0)
-     SFD_file_openfile.seek(0x1938)
-     readSFDmux_version = SFD_file_openfile.read(0x06)
-     if readSFDmux_version == b'\x28\x63\x29\x43\x52\x49':  # "(c)CRI in hex"
-      if onlyprintmuxerinfo.get() == 1:
-        sys.stdout.write(f"{SFDname.get()}: V1.0.0\n")
-      else:
-        sys.stdout.write(f'"{SFDname.get()}" is likely a V1.0.0 SFD.\n')
-      SFD_file_openfile.close()
-     else:
-      
-      #Check 0x1138
-      SFD_file_openfile.seek(0)
-      SFD_file_openfile.seek(0x1138)
+     
+     #Check for the first segment of video/audio data (at 0x180F/0x100F)
+     SFD_file_openfile.seek(0x180F)
+     check_if_section_equals_video_or_audio = SFD_file_openfile.read(0x1)
+     if check_if_section_equals_video_or_audio == ((b'\xc0' or b'\xe0' or b'\xd0')):
+      #Check 0x1938 for (c)CRI tag - if a SFD file didn't have any audio, this would appear though, hence the previous check.
+      SFD_file_openfile.seek(0x1938)
       readSFDmux_version = SFD_file_openfile.read(0x06)
-      if readSFDmux_version == b'\x28\x63\x29\x43\x52\x49':
+      if readSFDmux_version == b'\x28\x63\x29\x43\x52\x49':  # "(c)CRI" (SFA/ADX audio tag) in hex
        if onlyprintmuxerinfo.get() == 1:
-        sys.stdout.write(f"{SFDname.get()}: V1.0.0\n")
+         sys.stdout.write(f"{SFDname.get()}: V1.0.0\n")
        else:
-        sys.stdout.write(f'"{SFDname.get()}" is likely a V1.0.0 SFD.\n')
-       SFD_file_openfile.close()
+         sys.stdout.write(f'"{SFDname.get()}" is a V1.0.0 SFD.\n')
       else:
        if onlyprintmuxerinfo.get() == 1:
-        sys.stdout.write(f"{SFDname.get()}: SFD version unable to be determined. It may possibly be a V1.0.0 SFD for a Dreamcast game, or an earlier Saturn SFD.\n")
-        #sys.stderr.write(f"{SFDname.get()}: SFD version unable to be determined. It may possibly be a V1.0.0 SFD for a Dreamcast game, or an earlier Saturn SFD.\n")
+         sys.stdout.write(f"{SFDname.get()}: V1.0.0\n")
        else:
-        sys.stdout.write("SFD version unable to be determined. It may possibly be a V1.0.0 SFD for a Dreamcast game, or an earlier Saturn SFD.\n")
-        #sys.stderr.write("SFD version unable to be determined. It may possibly be a V1.0.0 SFD for a Dreamcast game, or an earlier Saturn SFD.\n")
-       SFD_file_openfile.close()
+         sys.stdout.write(f'"{SFDname.get()}" is (likely) a V1.0.0 SFD (as it contains a correct section header at 0x1938).\n')
+     else:
+      #Check for 0x1138 offset.
+      SFD_file_openfile.seek(0x100F)
+      check_if_section_equals_video_or_audio = SFD_file_openfile.read(0x1)
+      if check_if_section_equals_video_or_audio == ((b'\xc0' or b'\xe0' or b'\xd0')):
+       #Check 0x1138 for (c)CRI tag - if a SFD file didn't have any audio, this would appear though, hence the previous check.
+       SFD_file_openfile.seek(0x1138)
+       readSFDmux_version = SFD_file_openfile.read(0x06)
+       if readSFDmux_version == b'\x28\x63\x29\x43\x52\x49': # "(c)CRI" (SFA/ADX audio tag) in hex
+         if onlyprintmuxerinfo.get() == 1:
+          sys.stdout.write(f"{SFDname.get()}: V1.0.0\n")
+         else:
+          sys.stdout.write(f'"{SFDname.get()}" is a V1.0.0 SFD.\n')
+       else:
+         if onlyprintmuxerinfo.get() == 1:
+          sys.stdout.write(f"{SFDname.get()}: V1.0.0\n")
+         else:
+          sys.stdout.write(f'"{SFDname.get()}" is (likely) a V1.0.0 SFD (as it contains a correct section header at 0x100F).\n')
+ 
+      else:
+       if onlyprintmuxerinfo.get() == 1:
+        sys.stdout.write(f"{SFDname.get()}: SFD version unable to be determined. It may possibly not be an SFD file, despite the extension, or may be an earlier SEGA Saturn SFD.\n")
+        #Mana Khemia 2 Portable Plus is an example of a game that uses .SFD but is actually a different format (PSMF), for whatever reason.
+       else:
+        sys.stdout.write(f"{SFDname.get()}: SFD version unable to be determined. It may possibly not be an SFD file, despite the extension, or may be an earlier SEGA Saturn SFD.\n")
+     SFD_file_openfile.close()
    
+
    except Exception as error_readforversion:
      sys.stderr.write(f"The following error occurred:, {error_readforversion}\n")
      SFD_file_openfile.close()
@@ -216,13 +226,7 @@ def findversion():
 
 
 def updater_exe():
- updaterlocation = os.getcwd() + '/updater.exe'
- if os.path.isfile(updaterlocation):
-  runupdater = f'"{updaterlocation}"'
-  subprocess.run(runupdater, shell=True, capture_output=True, text=True)
- else:
-  print("Unable to find updater.exe, program will not be able to update.")
-  pass
+ check_for_new_SofdecVideoTools_version()
 
 gui_elements()
 
@@ -235,10 +239,16 @@ if __name__ == "__main__":
  parser.add_argument('-disable_updater', action='store_true', help='Disables the program update checker from running on the current command.')
  args = parser.parse_args()
 
+ if disable_updater.get() == 1:  #Check if updater should run or not
+   pass
+ else:
+   updater_exe()
+   print("")
+
+
  #Check if any commands are given - if not, run GUI, otherwise disable the GUI.
  if args.no_gui:
   disable_gui.set(1)
-
 
  if disable_gui.get() == 1:
   SFDfilepath.set(args.file)
@@ -261,13 +271,6 @@ if __name__ == "__main__":
   else:
    input('\nThe given file/folder could not be found. Please ensure the folder exists and the path is correct, and try again.\nPress any key to exit.\n')
    os._exit(0)
-
-
-  if disable_updater.get() == 1:  #Check if updater should run or not
-   pass
-  else:
-   updater_exe()
-
 
   findversion()
   os._exit(0)
