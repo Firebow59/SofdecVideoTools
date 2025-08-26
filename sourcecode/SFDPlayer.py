@@ -10,7 +10,7 @@ from check_for_ffmpeg import ffmpeg_location_int, ffprobe_location_int, run_ffmp
 from updater import check_for_new_SofdecVideoTools_version
 
 master = tk.Tk()
-master.geometry("300x130"), master.title("SFDPlayer V2.0.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdplayer.ico")
+master.geometry("300x130"), master.title("SFDPlayer V2.1.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdplayer.ico")
 
 SFDfilepath = StringVar()
 SFDname = StringVar()

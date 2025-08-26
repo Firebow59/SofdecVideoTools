@@ -11,7 +11,7 @@ from updater import check_for_new_SofdecVideoTools_version
 
 
 master = tk.Tk()
-master.geometry("300x130"), master.title("SFDVersionDetector V2.0.0"), master.resizable(False, False)
+master.geometry("300x130"), master.title("SFDVersionDetector V2.1.0"), master.resizable(False, False)
 
 currentdir = os.getcwd()
 
