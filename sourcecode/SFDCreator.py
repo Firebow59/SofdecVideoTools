@@ -14,7 +14,7 @@ from updater import check_for_new_SofdecVideoTools_version
 
 #GUI Main Menu Window/Frames
 master = tk.Tk()
-master.geometry("600x450"), master.title("SFDCreator V2.1.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdextractor.ico")
+master.geometry("600x450"), master.title("SFDCreator V2.1.1"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdextractor.ico")
 dirframe = LabelFrame(master, text="Input Files")
 dirframe.place(relx=0.010, rely=0.0, relheight=0.365, relwidth=0.980) #leave this .place seperate from the "dirframe =" to avoid position issue.
 outputdirframe = LabelFrame(master, text="Output File").place(relx=0.010, rely=0.37, relheight=0.368, relwidth=0.980)
@@ -220,11 +220,11 @@ def gui_elements_mainmenu():
     helpmenu_find_sfd_version_output_videoresolution_text.config(text="", font=("Arial", 9))
     helpmenu_find_sfd_version_output_videoframerate_text.config(text="", font=("Arial", 9))
 
-    versiondetector_path = f'"{os.getcwd() + '/SFDVersionDetector.exe'}"'
+    versiondetector_path = os.getcwd() + '/SFDVersionDetector.exe'
     #versiondetector_path = 'python SFDVersionDetector.py'  #Debug path
-    versiondetector_cmd = f'{versiondetector_path} -file "{filePath_version_detect_sample_sfd.get()}" -no_gui -version_only -disable_done_text -disable_updater'
+    versiondetector_cmd = f'"{versiondetector_path}" -file "{filePath_version_detect_sample_sfd.get()}" -no_gui -version_only -disable_done_text -disable_updater'
     if os.path.exists(versiondetector_path):  #Disable if trying to use .py file
-     versiondetector_runcommand_subprocess = subprocess.run(versiondetector_cmd, creationflags=subprocess.CREATE_NO_WINDOW, shell=True, capture_output=True, text=True)
+     versiondetector_runcommand_subprocess = subprocess.run(versiondetector_cmd, creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, shell=True, text=True)
      output_SFD_version_version_detector_stdout = versiondetector_runcommand_subprocess.stdout
      if "SFD version unable to be determined" in output_SFD_version_version_detector_stdout:
       unable_to_get_muxer_info.set(1)
@@ -244,7 +244,7 @@ def gui_elements_mainmenu():
       if unable_to_get_muxer_info.get() == 1:
        output_SFD_version_version_detector_stdout_fixed = 'Unable to be determined.'
      else:
-      output_SFD_version_version_detector_stdout_fixed = versiondetector_runcommand_subprocess.stdout.strip().split(':')[1]
+      output_SFD_version_version_detector_stdout_fixed = output_SFD_version_version_detector_stdout.strip().split(':')[1]
     else:
      print("SFDVersionDetector.exe could not be found.")
      tk.messagebox.showerror(title='SFD Version Detector Error', message=f"SFDVersionDetector.exe could not be found. Please check that the file exists in the same folder as SFDCreator.exe. If it doesn't exist in the same folder, re-download SofdecVideoTools.")

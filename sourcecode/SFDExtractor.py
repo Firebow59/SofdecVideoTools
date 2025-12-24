@@ -13,7 +13,7 @@ from updater import check_for_new_SofdecVideoTools_version
 
 
 master = tk.Tk()
-master.geometry("600x300"), master.title("SFDExtractor V2.1.0"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdextractor.ico")
+master.geometry("600x300"), master.title("SFDExtractor V2.1.1"), master.resizable(False, False)#, master.iconbitmap("resource/icon/sfdextractor.ico")
 page1 = Frame(master, bg='#f0f0f0').place(relx=0.0, rely=0.0, relheight=1.006, relwidth=1.004)
 dirframe = LabelFrame(master, text="Directories")
 dirframe.place(relx=0.010, rely=0.0, relheight=0.365, relwidth=0.980)

@@ -4,7 +4,7 @@ import webbrowser
 import os
 
 def check_for_new_SofdecVideoTools_version():
- current_version = 'V2.1.0'  #Update this for every new release
+ current_version = 'V2.1.1'  #Update this for every new release
  number_of_times_tried = 1
     
  print("Checking for update...")
